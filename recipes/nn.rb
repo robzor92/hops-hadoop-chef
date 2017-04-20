@@ -212,7 +212,7 @@ if node.kagent.enabled == "true"
   end
 end
 
-tmp_dirs   = [ "/tmp", node.hops.hdfs.user_home, node.hops.hdfs.user_home + "/" + node.hops.hdfs.user ]
+tmp_dirs   = [ node.hops.hdfs.user_home, node.hops.hdfs.user_home + "/" + node.hops.hdfs.user ]
 
 for d in tmp_dirs
   hops_hdfs_directory d do
@@ -220,5 +220,16 @@ for d in tmp_dirs
     owner node.hops.hdfs.user
     group node.hops.group
     mode "1775"
+  end
+end
+
+tmp_dir = [ "/tmp"]
+
+for d in tmp_dir
+  hops_hdfs_directory d do
+    action :create_as_superuser
+    owner node.hops.hdfs.user
+    group node.hops.group
+    mode "1777"
   end
 end
