@@ -34,7 +34,6 @@ ndb_connectstring()
 
 jdbc_url()
 
-
 rpcSocketFactory = "org.apache.hadoop.net.StandardSocketFactory"
 hopsworks_crl_uri = "RPC TLS NOT ENABLED"
 if node['hops']['tls']['enabled'].eql? "true"
@@ -56,17 +55,16 @@ else
   allNNIps = "#{node['hops']['nn']['private_ips'][0]}" + ":#{nnPort}"
 end
 
-firstNN = "hdfs://" + private_recipe_ip("hops", "nn") + ":#{nnPort}"
+# This is a namenode machine, the rpc-address in hdfs-site.xml is used as "bind to" address
 if node['hops']['nn']['private_ips'].include?(my_ip)
-  # This is a namenode machine, the rpc-address in hdfs-site.xml is used as "bind to" address
   nn_rpc_address = "#{my_ip}:#{nnPort}"
   nn_http_address = "#{my_ip}:#{node['hops']['nn']['http_port']}"
-  firstNN = "hdfs://#{nn_rpc_address}"
-  allNNIps = nn_rpc_address 
 else
   # This is a non namenode machine, a random namenode works
-  nn_rpc_address = private_recipe_ip("hops", "nn") + ":#{nnPort}"
+    nn_rpc_address = private_recipe_ip("hops", "nn") + ":#{nnPort}"
 end
+
+defaultFS = "hdfs://#{nn_rpc_address}"
 
 #
 # Constraints for Attributes - enforce them!
@@ -171,7 +169,7 @@ template "#{node['hops']['conf_dir']}/core-site.xml" do
   group node['hops']['group']
   mode "740"
   variables({
-     :firstNN => firstNN,
+     :defaultFS => defaultFS,
      :hopsworks => hopsworksNodes,
      :hopsworksUser => hopsworksUser,
      :livyUser => livyUser,
@@ -234,8 +232,7 @@ template "#{node['hops']['home']}/sbin/set-env.sh" do
   action :create
 end
 
-
-locDomainId = node['hops']['nn']['private_ips_domainIds'].has_key?(my_ip) ? node['hops']['nn']['private_ips_domainIds'][my_ip] : 0
+location_domain_id = node['hops']['nn']['private_ips_domainIds'].has_key?(my_ip) ? node['hops']['nn']['private_ips_domainIds'][my_ip] : 0
 template "#{node['hops']['conf_dir']}/hdfs-site.xml" do
   source "hdfs-site.xml.erb"
   owner node['hops']['hdfs']['user']
@@ -244,7 +241,7 @@ template "#{node['hops']['conf_dir']}/hdfs-site.xml" do
   cookbook "hops"
   variables({
     :nn_rpc_address => nn_rpc_address,
-    :locationDomainId => locDomainId,
+    :location_domain_id => location_domain_id,
     :nn_http_address => nn_http_address
   })
   action :create
